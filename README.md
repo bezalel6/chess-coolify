@@ -5,25 +5,43 @@ This repository is used by Coolify to orchestrate the Chess application using pr
 ## How it works
 
 1. Local machine builds the application
-2. `deploy-to-coolify.ps1` rsyncs built files to the server
-3. Coolify uses this docker-compose.yml to run the pre-built application
-4. No building happens on the server - just running containers
+2. `deploy-to-coolify.ps1` syncs built files to the server
+3. `trigger-deploy.ps1` pushes to this repo to trigger Coolify
+4. Coolify detects the git push and redeploys the containers
+5. No building happens on the server - just running containers
 
 ## Directory Structure
 
 ```
+Server file structure:
+/home/{user}/chess-app-builds/
+├── app-dist/              # Next.js standalone build
+└── ws-dist/               # WebSocket server files
+
+Coolify structure:
 /data/coolify/applications/{app-id}/
-├── source/                 # This Git repo (docker-compose.yml)
-└── builds/                 # Pre-built files from rsync
-    ├── app-dist/          # Next.js standalone build
-    └── ws-dist/           # WebSocket server files
+└── source/                # This Git repo (docker-compose.yml)
 ```
 
 ## Deployment
 
-Run from your local machine:
+### Quick Deploy (Build + Sync + Trigger)
 ```powershell
+.\deploy-to-coolify.ps1 -Trigger
+```
+
+### Step by Step
+```powershell
+# 1. Build and sync files
 .\deploy-to-coolify.ps1
+
+# 2. Trigger deployment
+.\trigger-deploy.ps1
+```
+
+### Skip Build (Use existing build)
+```powershell
+.\deploy-to-coolify.ps1 -SkipBuild -Trigger
 ```
 
 ## Environment Variables
