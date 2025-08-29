@@ -38,10 +38,14 @@ services:
       # Traefik labels for main app
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=Host(`chess.rndev.site`)"
-      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.entrypoints=https,http"
       - "traefik.http.routers.app.tls=true"
       - "traefik.http.routers.app.tls.certresolver=letsencrypt"
       - "traefik.http.services.app.loadbalancer.server.port=3000"
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.app-http.rule=Host(`chess.rndev.site`)"
+      - "traefik.http.routers.app-http.entrypoints=http"
+      - "traefik.http.routers.app-http.middlewares=redirect-to-https"
 
   # WebSocket Server (using pre-built JavaScript)
   websocket:
@@ -76,13 +80,18 @@ services:
       timeout: 5s
       retries: 5
     labels:
-      # Override Coolify's auto-configuration with correct Traefik labels
+      # Traefik labels for WebSocket service
       - "traefik.enable=true"
       - "traefik.http.routers.websocket.rule=Host(`ws-chess.rndev.site`)"
-      - "traefik.http.routers.websocket.entrypoints=websecure"
+      - "traefik.http.routers.websocket.entrypoints=https,http"
       - "traefik.http.routers.websocket.tls=true"
       - "traefik.http.routers.websocket.tls.certresolver=letsencrypt"
       - "traefik.http.services.websocket.loadbalancer.server.port=3001"
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.websocket-http.rule=Host(`ws-chess.rndev.site`)"
+      - "traefik.http.routers.websocket-http.entrypoints=http"
+      - "traefik.http.routers.websocket-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
 
   # Redis with authentication
   redis:
