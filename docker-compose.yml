@@ -35,14 +35,15 @@ services:
       timeout: 10s
       retries: 3
 
-  # WebSocket Server (using TypeScript files from host)
+  # WebSocket Server (using pre-built JavaScript)
   websocket:
     image: node:20-alpine
     working_dir: /app
     volumes:
-      # Mount WebSocket server files from host system
+      # Mount pre-built WebSocket server
       - /home/rndev/chess-app-builds/ws-dist:/app:ro
-    command: npx tsx ws-server.ts
+    # Just run the compiled JavaScript directly
+    command: node ws-server.js
     ports:
       - "${WS_PORT:-3001}:3001"
       - "${HEALTH_PORT:-3002}:3002"
