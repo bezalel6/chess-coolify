@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # Next.js Application (using pre-built files from host)
+  app:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      # Mount pre-built files from Coolify's perspective
+      # Coolify will clone this repo to /data/coolify/applications/{app-id}/source
+      # Your rsync target should be /data/coolify/applications/{app-id}/builds
+      - ../builds/app-dist:/app:ro
+    command: node server.js
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://ws.chess.rndev.site}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+    restart: unless-stopped
+    depends_on:
+      - websocket
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # WebSocket Server (using TypeScript files from host)
+  websocket:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      # Mount WebSocket server files
+      - ../builds/ws-dist:/app:ro
+    command: npx tsx ws-server.ts
+    ports:
+      - "${WS_PORT:-3001}:3001"
+      - "${HEALTH_PORT:-3002}:3002"
+    environment:
+      - NODE_ENV=production
+      - WS_PORT=3001
+      - HEALTH_PORT=3002
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis}@redis:6379
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://chess.rndev.site}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://ws.chess.rndev.site}
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis with authentication
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis}
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis}
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local
