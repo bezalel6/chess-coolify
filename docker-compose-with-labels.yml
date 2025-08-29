@@ -6,11 +6,7 @@ services:
     image: node:20-alpine
     working_dir: /app
     volumes:
-      # Mount pre-built files from host system
-      # Option 1: If Coolify has access to /home/rndev
       - /home/rndev/chess-app-builds/app-dist:/app:ro
-      # Option 2: Use Coolify volumes (configure in Coolify UI)
-      # - app-dist:/app:ro
     command: node server.js
     ports:
       - "${APP_PORT:-3000}:3000"
@@ -35,22 +31,20 @@ services:
       timeout: 10s
       retries: 3
     labels:
-      # Traefik labels for main app
+      # Traefik labels for app
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`chess.rndev.site`)"
-      - "traefik.http.routers.app.entrypoints=websecure"
-      - "traefik.http.routers.app.tls=true"
-      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
-      - "traefik.http.services.app.loadbalancer.server.port=3000"
+      - "traefik.http.routers.chess-app.rule=Host(`chess.rndev.site`)"
+      - "traefik.http.routers.chess-app.entrypoints=websecure"
+      - "traefik.http.routers.chess-app.tls=true"
+      - "traefik.http.routers.chess-app.tls.certresolver=letsencrypt"
+      - "traefik.http.services.chess-app.loadbalancer.server.port=3000"
 
   # WebSocket Server (using pre-built JavaScript)
   websocket:
     image: node:20-alpine
     working_dir: /app
     volumes:
-      # Mount pre-built WebSocket server
       - /home/rndev/chess-app-builds/ws-dist:/app:ro
-    # Just run the compiled JavaScript directly
     command: node ws-server.js
     ports:
       - "${WS_PORT:-3001}:3001"
@@ -76,13 +70,16 @@ services:
       timeout: 5s
       retries: 5
     labels:
-      # Override Coolify's auto-configuration with correct Traefik labels
+      # Traefik labels for WebSocket
       - "traefik.enable=true"
-      - "traefik.http.routers.websocket.rule=Host(`ws-chess.rndev.site`)"
-      - "traefik.http.routers.websocket.entrypoints=websecure"
-      - "traefik.http.routers.websocket.tls=true"
-      - "traefik.http.routers.websocket.tls.certresolver=letsencrypt"
-      - "traefik.http.services.websocket.loadbalancer.server.port=3001"
+      - "traefik.http.routers.chess-ws.rule=Host(`ws-chess.rndev.site`)"
+      - "traefik.http.routers.chess-ws.entrypoints=websecure"
+      - "traefik.http.routers.chess-ws.tls=true"
+      - "traefik.http.routers.chess-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.services.chess-ws.loadbalancer.server.port=3001"
+      # WebSocket specific headers
+      - "traefik.http.middlewares.chess-ws-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.routers.chess-ws.middlewares=chess-ws-headers"
 
   # Redis with authentication
   redis:
