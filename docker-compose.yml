@@ -6,10 +6,11 @@ services:
     image: node:20-alpine
     working_dir: /app
     volumes:
-      # Mount pre-built files from Coolify's perspective
-      # Coolify will clone this repo to /data/coolify/applications/{app-id}/source
-      # Your rsync target should be /data/coolify/applications/{app-id}/builds
-      - ../builds/app-dist:/app:ro
+      # Mount pre-built files from host system
+      # Option 1: If Coolify has access to /home/rndev
+      - /home/rndev/chess-app-builds/app-dist:/app:ro
+      # Option 2: Use Coolify volumes (configure in Coolify UI)
+      # - app-dist:/app:ro
     command: node server.js
     ports:
       - "${APP_PORT:-3000}:3000"
@@ -39,8 +40,8 @@ services:
     image: node:20-alpine
     working_dir: /app
     volumes:
-      # Mount WebSocket server files
-      - ../builds/ws-dist:/app:ro
+      # Mount WebSocket server files from host system
+      - /home/rndev/chess-app-builds/ws-dist:/app:ro
     command: npx tsx ws-server.ts
     ports:
       - "${WS_PORT:-3001}:3001"
